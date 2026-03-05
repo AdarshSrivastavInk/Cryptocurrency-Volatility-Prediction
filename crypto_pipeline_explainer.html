@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cryptocurrency Volatility Prediction – Pipeline</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;700&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --card: #161b22;
+    --border: #21262d;
+    --accent1: #f7c948;   /* gold */
+    --accent2: #58e0a0;   /* mint green */
+    --accent3: #7f8fff;   /* periwinkle */
+    --accent4: #ff6b6b;   /* coral */
+    --accent5: #c084fc;   /* purple */
+    --text: #e6edf3;
+    --muted: #7d8590;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 60px 40px 40px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #0a0c10 60%, #111822 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(247,201,72,.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent1);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  header h1 {
+    font-size: clamp(24px, 4vw, 42px);
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    max-width: 700px;
+  }
+  header h1 span { color: var(--accent1); }
+  .header-sub {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 600px;
+  }
+  .tech-tags {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-top: 24px;
+  }
+  .tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--surface);
+  }
+
+  /* ── Main layout ── */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 50px 24px 80px;
+  }
+
+  .section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    margin-top: 60px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── Pipeline flow ── */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 0 28px;
+    position: relative;
+  }
+
+  /* connector line */
+  .step:not(:last-child) .step-line {
+    position: absolute;
+    left: 29px;
+    top: 56px;
+    bottom: -12px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--step-color, var(--accent1)), transparent);
+    opacity: .35;
+  }
+
+  .step-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 8px;
+  }
+
+  .step-num {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    border: 2px solid var(--step-color, var(--accent1));
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--step-color, var(--accent1));
+    background: var(--bg);
+    flex-shrink: 0;
+    box-shadow: 0 0 16px color-mix(in srgb, var(--step-color, var(--accent1)) 25%, transparent);
+    z-index: 1;
+  }
+
+  .step-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--step-color, var(--accent1));
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    transition: border-color .2s;
+  }
+
+  .step-card:hover {
+    border-color: var(--step-color, var(--accent1));
+    box-shadow: 0 0 30px color-mix(in srgb, var(--step-color, var(--accent1)) 8%, transparent);
+  }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .step-icon { font-size: 20px; }
+  .step-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--step-color, var(--accent1));
+  }
+  .step-desc {
+    color: var(--muted);
+    font-size: 13.5px;
+    margin-bottom: 18px;
+    line-height: 1.7;
+  }
+
+  /* Code lines */
+  .code-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+  .code-line {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0 16px;
+    padding: 6px 16px;
+    border-bottom: 1px solid #161b22;
+    transition: background .15s;
+    cursor: default;
+  }
+  .code-line:last-child { border-bottom: none; }
+  .code-line:hover { background: #161b22; }
+  .line-num {
+    color: #3d444d;
+    font-size: 11px;
+    padding-top: 1px;
+    user-select: none;
+    min-width: 22px;
+  }
+  .line-code { color: #e6edf3; white-space: pre; }
+  .line-comment {
+    color: #3d444d;
+    font-size: 11px;
+    text-align: right;
+    white-space: nowrap;
+    padding-left: 16px;
+  }
+
+  /* syntax colours */
+  .kw { color: #ff7b72; }   /* keyword */
+  .fn { color: #d2a8ff; }   /* function */
+  .st { color: #a5d6ff; }   /* string */
+  .nm { color: #79c0ff; }   /* number/name */
+  .cm { color: #8b949e; }   /* comment */
+  .op { color: #f7c948; }   /* operator */
+  .cls { color: #58e0a0; }  /* class */
+
+  /* ── Flow diagram ── */
+  .flow-diagram {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    align-items: center;
+    justify-content: center;
+    margin: 40px 0;
+    padding: 32px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .flow-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 20px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 110px;
+    position: relative;
+  }
+  .flow-box .fb-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .flow-arrow {
+    font-size: 20px;
+    color: var(--muted);
+    margin: 0 4px;
+    flex-shrink: 0;
+  }
+
+  /* ── Model comparison ── */
+  .model-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 12px;
+  }
+  .model-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+  }
+  .model-name {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+  .model-type {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .model-desc { font-size: 12.5px; color: var(--muted); }
+  .model-badge {
+    display: inline-block;
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    border: 1px solid;
+  }
+
+  /* ── Metric pills ── */
+  .metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .metric {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .metric-label { color: var(--muted); font-size: 10px; margin-bottom: 4px; }
+  .metric-val { font-size: 18px; font-weight: 700; }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 30px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  footer p { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .gh-link {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent1);
+    text-decoration: none;
+    border: 1px solid var(--accent1);
+    padding: 6px 14px;
+    border-radius: 4px;
+    transition: background .2s;
+  }
+  .gh-link:hover { background: rgba(247,201,72,.1); }
+
+  /* tooltip on hover */
+  .has-tip { position: relative; }
+  .has-tip:hover .tip {
+    opacity: 1; transform: translateY(0);
+  }
+  .tip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%; transform: translateX(-50%) translateY(4px);
+    background: #1c2128;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: all .2s;
+    z-index: 10;
+    font-family: var(--sans);
+    font-weight: 400;
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 40px 20px 30px; }
+    .step { grid-template-columns: 48px 1fr; gap: 0 16px; }
+    .flow-diagram { flex-direction: column; }
+    .flow-arrow { transform: rotate(90deg); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════ HEADER ════════ -->
+<header>
+  <p class="header-label">Project Pipeline · Line-by-Line Explanation</p>
+  <h1>Cryptocurrency <span>Volatility</span> Prediction</h1>
+  <p class="header-sub">A complete walkthrough of the ML pipeline — from raw market data to trained predictive models — with every line explained.</p>
+  <div class="tech-tags">
+    <span class="tag">Python</span>
+    <span class="tag">Pandas</span>
+    <span class="tag">NumPy</span>
+    <span class="tag">Scikit-learn</span>
+    <span class="tag">XGBoost</span>
+    <span class="tag">LSTM</span>
+    <span class="tag">Matplotlib</span>
+    <span class="tag">Jupyter Notebook</span>
+  </div>
+</header>
+
+<!-- ════════ MAIN ════════ -->
+<main>
+
+  <!-- Flow overview -->
+  <p class="section-title">Pipeline Overview</p>
+  <div class="flow-diagram">
+    <div class="flow-box" style="border-color:#f7c948; color:#f7c948;">
+      <div class="fb-label">Step 1</div>Data Loading
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color:#58e0a0; color:#58e0a0;">
+      <div class="fb-label">Step 2</div>Preprocessing
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color:#7f8fff; color:#7f8fff;">
+      <div class="fb-label">Step 3</div>Feature Eng.
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color:#ff6b6b; color:#ff6b6b;">
+      <div class="fb-label">Step 4</div>Target Variable
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color:#c084fc; color:#c084fc;">
+      <div class="fb-label">Step 5</div>Model Training
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color:#f7c948; color:#f7c948;">
+      <div class="fb-label">Step 6</div>Evaluation
+    </div>
+  </div>
+
+  <!-- ══ STEP 1 ══ -->
+  <p class="section-title">Step-by-Step Code Walkthrough</p>
+  <div class="pipeline">
+
+    <!-- STEP 1: Imports & Data Loading -->
+    <div class="step" style="--step-color: #f7c948;">
+      <div class="step-left">
+        <div class="step-num">01</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-card">
+        <div class="step-header">
+          <span class="step-icon">📦</span>
+          <span class="step-name">Imports & Library Setup</span>
+        </div>
+        <p class="step-desc">All required Python libraries are imported at the top of the notebook. These are the tools that power every stage of the pipeline.</p>
+        <div class="code-block">
+          <div class="code-line">
+            <span class="line-num">1</span>
+            <span class="line-code"><span class="kw">import</span> <span class="nm">pandas</span> <span class="kw">as</span> <span class="nm">pd</span></span>
+            <span class="line-comment">← tabular data manipulation</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">2</span>
+            <span class="line-code"><span class="kw">import</span> <span class="nm">numpy</span> <span class="kw">as</span> <span class="nm">np</span></span>
+            <span class="line-comment">← numerical arrays & math</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">3</span>
+            <span class="line-code"><span class="kw">import</span> <span class="nm">matplotlib.pyplot</span> <span class="kw">as</span> <span class="nm">plt</span></span>
+            <span class="line-comment">← visualization charts</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">4</span>
+            <span class="line-code"><span class="kw">import</span> <span class="nm">seaborn</span> <span class="kw">as</span> <span class="nm">sns</span></span>
+            <span class="line-comment">← statistical plots & heatmaps</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">5</span>
+            <span class="line-code"><span class="kw">from</span> <span class="nm">sklearn.model_selection</span> <span class="kw">import</span> <span class="cls">train_test_split</span></span>
+            <span class="line-comment">← split data into train/test</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">6</span>
+            <span class="line-code"><span class="kw">from</span> <span class="nm">sklearn.preprocessing</span> <span class="kw">import</span> <span class="cls">StandardScaler</span></span>
+            <span class="line-comment">← normalise feature values</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">7</span>
+            <span class="line-code"><span class="kw">from</span> <span class="nm">sklearn.metrics</span> <span class="kw">import</span> <span class="fn">mean_squared_error</span>, <span class="fn">r2_score</span></span>
+            <span class="line-comment">← measure model accuracy</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">8</span>
+            <span class="line-code"><span class="kw">import</span> <span class="nm">warnings</span>; <span class="nm">warnings</span>.<span class="fn">filterwarnings</span>(<span class="st">'ignore'</span>)</span>
+            <span class="line-comment">← suppress noisy warnings</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Data Loading -->
+    <div class="step" style="--step-color: #f7c948;">
+      <div class="step-left">
+        <div class="step-num">02</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-card">
+        <div class="step-header">
+          <span class="step-icon">📂</span>
+          <span class="step-name">Data Loading</span>
+        </div>
+        <p class="step-desc">The dataset (OHLCV — Open, High, Low, Close, Volume) is loaded from the CSV file into a Pandas DataFrame. The Date column is parsed so Python understands it as actual dates, not plain text.</p>
+        <div class="code-block">
+          <div class="code-line">
+            <span class="line-num">10</span>
+            <span class="line-code"><span class="nm">df</span> <span class="op">=</span> <span class="nm">pd</span>.<span class="fn">read_csv</span>(<span class="st">'dataset.csv'</span>, <span class="nm">parse_dates</span><span class="op">=</span>[<span class="st">'Date'</span>])</span>
+            <span class="line-comment">← load CSV, auto-parse Date column</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">11</span>
+            <span class="line-code"><span class="nm">df</span>.<span class="fn">sort_values</span>(<span class="st">'Date'</span>, <span class="nm">inplace</span><span class="op">=</span><span class="kw">True</span>)</span>
+            <span class="line-comment">← ensure chronological order</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">12</span>
+            <span class="line-code"><span class="nm">df</span>.<span class="fn">reset_index</span>(<span class="nm">drop</span><span class="op">=</span><span class="kw">True</span>, <span class="nm">inplace</span><span class="op">=</span><span class="kw">True</span>)</span>
+            <span class="line-comment">← reset row index after sorting</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">13</span>
+            <span class="line-code"><span class="nm">df</span>.<span class="fn">head</span>()</span>
+            <span class="line-comment">← preview first 5 rows</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: EDA -->
+    <div class="step" style="--step-color: #58e0a0;">
+      <div class="step-left">
+        <div class="step-num">03</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-card">
+        <div class="step-header">
+          <span class="step-icon">🔍</span>
+          <span class="step-name">Exploratory Data Analysis (EDA)</span>
+        </div>
+        <p class="step-desc">Before building anything, we examine the data — its shape, data types, missing values, and statistical summary. This reveals what needs to be cleaned and what patterns exist.</p>
+        <div class="code-block">
+          <div class="code-line">
+            <span class="line-num">15</span>
+            <span class="line-code"><span class="fn">print</span>(<span class="nm">df</span>.<span class="fn">shape</span>)</span>
+            <span class="line-comment">← (rows, columns) — size of dataset</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">16</span>
+            <span class="line-code"><span class="nm">df</span>.<span class="fn">info</span>()</span>
+            <span class="line-comment">← column names, types, non-null counts</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">17</span>
+            <span class="line-code"><span class="nm">df</span>.<span class="fn">describe</span>()</span>
+            <span class="line-comment">← mean, std, min, max per column</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">18</span>
+            <span class="line-code"><span class="nm">df</span>.<span class="fn">isnull</span>().<span class="fn">sum</span>()</span>
+            <span class="line-comment">← count missing values per column</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">19</span>
+            <span class="line-code"><span class="nm">df</span>[<span class="st">'Close'</span>].<span class="fn">plot</span>(<span class="nm">title</span><span class="op">=</span><span class="st">'Closing Price Over Time'</span>)</span>
+            <span class="line-comment">← visualise price trend</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">20</span>
+            <span class="line-code"><span class="nm">sns</span>.<span class="fn">heatmap</span>(<span class="nm">df</span>.<span class="fn">corr</span>(), <span class="nm">annot</span><span class="op">=</span><span class="kw">True</span>)</span>
+            <span class="line-comment">← correlation matrix of all features</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Preprocessing -->
+    <div class="step" style="--step-color: #58e0a0;">
+      <div class="step-left">
+        <div class="step-num">04</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-card">
+        <div class="step-header">
+          <span class="step-icon">🧹</span>
+          <span class="step-name">Data Preprocessing & Cleaning</span>
+        </div>
+        <p class="step-desc">Raw market data often contains missing values (trading holidays, API gaps). Here we handle NaNs and ensure numeric columns are in the right format. We also remove any duplicates.</p>
+        <div class="code-block">
+          <div class="code-line">
+            <span class="line-num">22</span>
+            <span class="line-code"><span class="nm">df</span>.<span class="fn">dropna</span>(<span class="nm">inplace</span><span class="op">=</span><span class="kw">True</span>)</span>
+            <span class="line-comment">← drop rows with any missing value</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">23</span>
+            <span class="line-code"><span class="nm">df</span>.<span class="fn">drop_duplicates</span>(<span class="nm">inplace</span><span class="op">=</span><span class="kw">True</span>)</span>
+            <span class="line-comment">← remove duplicate records</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">24</span>
+            <span class="line-code"><span class="nm">cols</span> <span class="op">=</span> [<span class="st">'Open'</span>, <span class="st">'High'</span>, <span class="st">'Low'</span>, <span class="st">'Close'</span>, <span class="st">'Volume'</span>]</span>
+            <span class="line-comment">← define numeric columns</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">25</span>
+            <span class="line-code"><span class="nm">df</span>[<span class="nm">cols</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="nm">cols</span>].<span class="fn">apply</span>(<span class="nm">pd</span>.<span class="fn">to_numeric</span>, <span class="nm">errors</span><span class="op">=</span><span class="st">'coerce'</span>)</span>
+            <span class="line-comment">← force numeric, bad values → NaN</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">26</span>
+            <span class="line-code"><span class="nm">df</span>.<span class="fn">fillna</span>(<span class="nm">method</span><span class="op">=</span><span class="st">'ffill'</span>, <span class="nm">inplace</span><span class="op">=</span><span class="kw">True</span>)</span>
+            <span class="line-comment">← forward-fill remaining NaNs</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: Feature Engineering -->
+    <div class="step" style="--step-color: #7f8fff;">
+      <div class="step-left">
+        <div class="step-num">05</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-card">
+        <div class="step-header">
+          <span class="step-icon">⚙️</span>
+          <span class="step-name">Feature Engineering</span>
+        </div>
+        <p class="step-desc">Raw OHLCV columns alone are weak predictors. We engineer technical indicators — moving averages, RSI, Bollinger Bands, daily return — to give models meaningful signal about price momentum and volatility patterns.</p>
+        <div class="code-block">
+          <div class="code-line">
+            <span class="line-num">28</span>
+            <span class="line-code"><span class="nm">df</span>[<span class="st">'Daily_Return'</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">'Close'</span>].<span class="fn">pct_change</span>()</span>
+            <span class="line-comment">← % change day-over-day</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">29</span>
+            <span class="line-code"><span class="nm">df</span>[<span class="st">'MA_7'</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">'Close'</span>].<span class="fn">rolling</span>(<span class="nm">7</span>).<span class="fn">mean</span>()</span>
+            <span class="line-comment">← 7-day moving average</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">30</span>
+            <span class="line-code"><span class="nm">df</span>[<span class="st">'MA_30'</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">'Close'</span>].<span class="fn">rolling</span>(<span class="nm">30</span>).<span class="fn">mean</span>()</span>
+            <span class="line-comment">← 30-day moving average</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">31</span>
+            <span class="line-code"><span class="nm">df</span>[<span class="st">'Volatility_7'</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">'Daily_Return'</span>].<span class="fn">rolling</span>(<span class="nm">7</span>).<span class="fn">std</span>()</span>
+            <span class="line-comment">← 7-day rolling std (volatility proxy)</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">32</span>
+            <span class="line-code"><span class="nm">df</span>[<span class="st">'High_Low_Pct'</span>] <span class="op">=</span> (<span class="nm">df</span>[<span class="st">'High'</span>] <span class="op">-</span> <span class="nm">df</span>[<span class="st">'Low'</span>]) <span class="op">/</span> <span class="nm">df</span>[<span class="st">'Close'</span>]</span>
+            <span class="line-comment">← intraday range as % of close</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">33</span>
+            <span class="line-code"><span class="nm">df</span>[<span class="st">'Upper_BB'</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">'MA_30'</span>] <span class="op">+</span> <span class="nm">2</span> <span class="op">*</span> <span class="nm">df</span>[<span class="st">'Close'</span>].<span class="fn">rolling</span>(<span class="nm">30</span>).<span class="fn">std</span>()</span>
+            <span class="line-comment">← upper Bollinger Band</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">34</span>
+            <span class="line-code"><span class="nm">df</span>[<span class="st">'Lower_BB'</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">'MA_30'</span>] <span class="op">-</span> <span class="nm">2</span> <span class="op">*</span> <span class="nm">df</span>[<span class="st">'Close'</span>].<span class="fn">rolling</span>(<span class="nm">30</span>).<span class="fn">std</span>()</span>
+            <span class="line-comment">← lower Bollinger Band</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">35</span>
+            <span class="line-code"><span class="nm">df</span>.<span class="fn">dropna</span>(<span class="nm">inplace</span><span class="op">=</span><span class="kw">True</span>)</span>
+            <span class="line-comment">← rolling windows create NaNs at start</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: Target Variable -->
+    <div class="step" style="--step-color: #ff6b6b;">
+      <div class="step-left">
+        <div class="step-num">06</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-card">
+        <div class="step-header">
+          <span class="step-icon">🎯</span>
+          <span class="step-name">Target Variable Definition</span>
+        </div>
+        <p class="step-desc">Volatility is defined as the rolling standard deviation of daily returns over a 30-day window. This is the value the model will learn to predict. All other engineered columns become the input features (X).</p>
+        <div class="code-block">
+          <div class="code-line">
+            <span class="line-num">38</span>
+            <span class="line-code"><span class="nm">df</span>[<span class="st">'Target_Volatility'</span>] <span class="op">=</span> <span class="nm">df</span>[<span class="st">'Daily_Return'</span>].<span class="fn">rolling</span>(<span class="nm">30</span>).<span class="fn">std</span>()</span>
+            <span class="line-comment">← 30-day realised volatility (y)</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">39</span>
+            <span class="line-code"><span class="nm">df</span>.<span class="fn">dropna</span>(<span class="nm">inplace</span><span class="op">=</span><span class="kw">True</span>)</span>
+            <span class="line-comment">← drop rows where target is NaN</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">41</span>
+            <span class="line-code"><span class="nm">features</span> <span class="op">=</span> [<span class="st">'Open'</span>, <span class="st">'High'</span>, <span class="st">'Low'</span>, <span class="st">'Close'</span>, <span class="st">'Volume'</span>,</span>
+            <span class="line-comment"></span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">42</span>
+            <span class="line-code">             <span class="st">'MA_7'</span>, <span class="st">'MA_30'</span>, <span class="st">'High_Low_Pct'</span>, <span class="st">'Upper_BB'</span>, <span class="st">'Lower_BB'</span>]</span>
+            <span class="line-comment">← all 10 input features (X)</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">43</span>
+            <span class="line-code"><span class="nm">X</span> <span class="op">=</span> <span class="nm">df</span>[<span class="nm">features</span>]</span>
+            <span class="line-comment">← feature matrix</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">44</span>
+            <span class="line-code"><span class="nm">y</span> <span class="op">=</span> <span class="nm">df</span>[<span class="st">'Target_Volatility'</span>]</span>
+            <span class="line-comment">← label vector</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: Train/Test Split & Scaling -->
+    <div class="step" style="--step-color: #ff6b6b;">
+      <div class="step-left">
+        <div class="step-num">07</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-card">
+        <div class="step-header">
+          <span class="step-icon">✂️</span>
+          <span class="step-name">Train / Test Split & Feature Scaling</span>
+        </div>
+        <p class="step-desc">We split the data 80/20 — 80% for training, 20% for testing. <code>shuffle=False</code> is critical here: time-series data must stay in order, otherwise future data would leak into training. StandardScaler then normalises all features to mean=0, std=1 so no single feature dominates.</p>
+        <div class="code-block">
+          <div class="code-line">
+            <span class="line-num">47</span>
+            <span class="line-code"><span class="nm">X_train</span>, <span class="nm">X_test</span>, <span class="nm">y_train</span>, <span class="nm">y_test</span> <span class="op">=</span> <span class="fn">train_test_split</span>(</span>
+            <span class="line-comment"></span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">48</span>
+            <span class="line-code">    <span class="nm">X</span>, <span class="nm">y</span>, <span class="nm">test_size</span><span class="op">=</span><span class="nm">0.2</span>, <span class="nm">shuffle</span><span class="op">=</span><span class="kw">False</span>)</span>
+            <span class="line-comment">← 80/20 split, NO shuffle (time-series!)</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">50</span>
+            <span class="line-code"><span class="nm">scaler</span> <span class="op">=</span> <span class="cls">StandardScaler</span>()</span>
+            <span class="line-comment">← initialise scaler</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">51</span>
+            <span class="line-code"><span class="nm">X_train</span> <span class="op">=</span> <span class="nm">scaler</span>.<span class="fn">fit_transform</span>(<span class="nm">X_train</span>)</span>
+            <span class="line-comment">← fit on train, transform train</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">52</span>
+            <span class="line-code"><span class="nm">X_test</span>  <span class="op">=</span> <span class="nm">scaler</span>.<span class="fn">transform</span>(<span class="nm">X_test</span>)</span>
+            <span class="line-comment">← ONLY transform test (no re-fitting!)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8: Model Training -->
+    <div class="step" style="--step-color: #c084fc;">
+      <div class="step-left">
+        <div class="step-num">08</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-card">
+        <div class="step-header">
+          <span class="step-icon">🤖</span>
+          <span class="step-name">Model Training — Multiple Algorithms</span>
+        </div>
+        <p class="step-desc">Several ML models are trained and compared so the best performer can be selected. Each model receives the same scaled training data.</p>
+
+        <div class="model-grid">
+          <div class="model-card">
+            <div class="model-name">Linear Regression</div>
+            <div class="model-type">Baseline</div>
+            <div class="model-desc">Fits a straight line through the data. Simple and fast — useful as a performance baseline.</div>
+            <span class="model-badge" style="color:#58e0a0;border-color:#58e0a0;">Low Complexity</span>
+          </div>
+          <div class="model-card">
+            <div class="model-name">Random Forest</div>
+            <div class="model-type">Ensemble</div>
+            <div class="model-desc">Builds hundreds of decision trees and averages their predictions. Robust to outliers and overfitting.</div>
+            <span class="model-badge" style="color:#7f8fff;border-color:#7f8fff;">Medium Complexity</span>
+          </div>
+          <div class="model-card">
+            <div class="model-name">XGBoost</div>
+            <div class="model-type">Gradient Boosting</div>
+            <div class="model-desc">Iteratively corrects errors of previous trees. Typically best performance on tabular financial data.</div>
+            <span class="model-badge" style="color:#f7c948;border-color:#f7c948;">High Performance</span>
+          </div>
+          <div class="model-card">
+            <div class="model-name">LSTM</div>
+            <div class="model-type">Deep Learning</div>
+            <div class="model-desc">Long Short-Term Memory network — captures temporal dependencies in sequential price data.</div>
+            <span class="model-badge" style="color:#c084fc;border-color:#c084fc;">Sequential</span>
+          </div>
+        </div>
+
+        <br>
+        <div class="code-block">
+          <div class="code-line">
+            <span class="line-num">55</span>
+            <span class="line-code"><span class="kw">from</span> <span class="nm">sklearn.linear_model</span> <span class="kw">import</span> <span class="cls">LinearRegression</span></span>
+            <span class="line-comment"></span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">56</span>
+            <span class="line-code"><span class="kw">from</span> <span class="nm">sklearn.ensemble</span> <span class="kw">import</span> <span class="cls">RandomForestRegressor</span></span>
+            <span class="line-comment"></span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">57</span>
+            <span class="line-code"><span class="kw">from</span> <span class="nm">xgboost</span> <span class="kw">import</span> <span class="cls">XGBRegressor</span></span>
+            <span class="line-comment"></span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">59</span>
+            <span class="line-code"><span class="nm">lr</span>  <span class="op">=</span> <span class="cls">LinearRegression</span>().<span class="fn">fit</span>(<span class="nm">X_train</span>, <span class="nm">y_train</span>)</span>
+            <span class="line-comment">← train linear model</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">60</span>
+            <span class="line-code"><span class="nm">rf</span>  <span class="op">=</span> <span class="cls">RandomForestRegressor</span>(<span class="nm">n_estimators</span><span class="op">=</span><span class="nm">100</span>).<span class="fn">fit</span>(<span class="nm">X_train</span>, <span class="nm">y_train</span>)</span>
+            <span class="line-comment">← 100 decision trees</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">61</span>
+            <span class="line-code"><span class="nm">xgb</span> <span class="op">=</span> <span class="cls">XGBRegressor</span>(<span class="nm">n_estimators</span><span class="op">=</span><span class="nm">200</span>).<span class="fn">fit</span>(<span class="nm">X_train</span>, <span class="nm">y_train</span>)</span>
+            <span class="line-comment">← 200 boosting rounds</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 9: Evaluation -->
+    <div class="step" style="--step-color: #f7c948;">
+      <div class="step-left">
+        <div class="step-num">09</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-card">
+        <div class="step-header">
+          <span class="step-icon">📊</span>
+          <span class="step-name">Model Evaluation & Comparison</span>
+        </div>
+        <p class="step-desc">Each model's predictions are compared against the actual test volatility using standard regression metrics. Lower RMSE and higher R² = better model.</p>
+
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-label">METRIC 1</div>
+            <div class="metric-val" style="color:#58e0a0;">RMSE</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Root Mean Squared Error<br>← penalises large errors</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">METRIC 2</div>
+            <div class="metric-val" style="color:#7f8fff;">MAE</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Mean Absolute Error<br>← average prediction gap</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">METRIC 3</div>
+            <div class="metric-val" style="color:#f7c948;">R²</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">R-Squared Score<br>← 1.0 = perfect fit</div>
+          </div>
+        </div>
+        <br>
+        <div class="code-block">
+          <div class="code-line">
+            <span class="line-num">65</span>
+            <span class="line-code"><span class="kw">def</span> <span class="fn">evaluate</span>(<span class="nm">model</span>, <span class="nm">name</span>):</span>
+            <span class="line-comment">← reusable eval function</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">66</span>
+            <span class="line-code">    <span class="nm">preds</span> <span class="op">=</span> <span class="nm">model</span>.<span class="fn">predict</span>(<span class="nm">X_test</span>)</span>
+            <span class="line-comment">← generate predictions on test set</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">67</span>
+            <span class="line-code">    <span class="nm">rmse</span> <span class="op">=</span> <span class="nm">np</span>.<span class="fn">sqrt</span>(<span class="fn">mean_squared_error</span>(<span class="nm">y_test</span>, <span class="nm">preds</span>))</span>
+            <span class="line-comment">← root mean squared error</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">68</span>
+            <span class="line-code">    <span class="nm">r2</span>   <span class="op">=</span> <span class="fn">r2_score</span>(<span class="nm">y_test</span>, <span class="nm">preds</span>)</span>
+            <span class="line-comment">← variance explained by model</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">69</span>
+            <span class="line-code">    <span class="fn">print</span>(<span class="st">f"</span><span class="nm">{name}</span><span class="st"> → RMSE:</span><span class="nm">{rmse:.4f}</span><span class="st">  R²:</span><span class="nm">{r2:.4f}</span><span class="st">"</span>)</span>
+            <span class="line-comment">← print formatted results</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">71</span>
+            <span class="line-code"><span class="kw">for</span> <span class="nm">m</span>, <span class="nm">n</span> <span class="kw">in</span> [(<span class="nm">lr</span>,<span class="st">'Linear'</span>),(<span class="nm">rf</span>,<span class="st">'RandomForest'</span>),(<span class="nm">xgb</span>,<span class="st">'XGBoost'</span>)]:</span>
+            <span class="line-comment"></span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">72</span>
+            <span class="line-code">    <span class="fn">evaluate</span>(<span class="nm">m</span>, <span class="nm">n</span>)</span>
+            <span class="line-comment">← evaluate all 3 models</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 10: Visualisation -->
+    <div class="step" style="--step-color: #58e0a0;">
+      <div class="step-left">
+        <div class="step-num">10</div>
+      </div>
+      <div class="step-card">
+        <div class="step-header">
+          <span class="step-icon">📈</span>
+          <span class="step-name">Visualisation of Results</span>
+        </div>
+        <p class="step-desc">Finally, we plot actual vs. predicted volatility to visually inspect how closely the model tracks real market behaviour. Feature importance from tree-based models shows which inputs mattered most.</p>
+        <div class="code-block">
+          <div class="code-line">
+            <span class="line-num">75</span>
+            <span class="line-code"><span class="nm">preds_xgb</span> <span class="op">=</span> <span class="nm">xgb</span>.<span class="fn">predict</span>(<span class="nm">X_test</span>)</span>
+            <span class="line-comment">← XGBoost test predictions</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">76</span>
+            <span class="line-code"><span class="nm">plt</span>.<span class="fn">figure</span>(<span class="nm">figsize</span><span class="op">=</span>(<span class="nm">14</span>,<span class="nm">5</span>))</span>
+            <span class="line-comment">← wide canvas for time-series plot</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">77</span>
+            <span class="line-code"><span class="nm">plt</span>.<span class="fn">plot</span>(<span class="nm">y_test</span>.<span class="fn">values</span>, <span class="nm">label</span><span class="op">=</span><span class="st">'Actual Volatility'</span>)</span>
+            <span class="line-comment">← ground truth line</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">78</span>
+            <span class="line-code"><span class="nm">plt</span>.<span class="fn">plot</span>(<span class="nm">preds_xgb</span>, <span class="nm">label</span><span class="op">=</span><span class="st">'XGBoost Predictions'</span>, <span class="nm">linestyle</span><span class="op">=</span><span class="st">'--'</span>)</span>
+            <span class="line-comment">← model predictions (dashed)</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">79</span>
+            <span class="line-code"><span class="nm">plt</span>.<span class="fn">legend</span>(); <span class="nm">plt</span>.<span class="fn">title</span>(<span class="st">'Volatility: Actual vs Predicted'</span>)</span>
+            <span class="line-comment">← label and title</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">81</span>
+            <span class="line-code"><span class="nm">feat_imp</span> <span class="op">=</span> <span class="nm">pd</span>.<span class="cls">Series</span>(<span class="nm">xgb</span>.<span class="nm">feature_importances_</span>, <span class="nm">index</span><span class="op">=</span><span class="nm">features</span>)</span>
+            <span class="line-comment">← feature importance scores</span>
+          </div>
+          <div class="code-line">
+            <span class="line-num">82</span>
+            <span class="line-code"><span class="nm">feat_imp</span>.<span class="fn">sort_values</span>().<span class="fn">plot</span>(<span class="nm">kind</span><span class="op">=</span><span class="st">'barh'</span>)</span>
+            <span class="line-comment">← horizontal bar chart of importance</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end pipeline -->
+
+</main>
+
+<footer>
+  <p>© 2026 · Cryptocurrency Volatility Prediction · Pipeline Explainer</p>
+  <a class="gh-link" href="https://github.com/AdarshSrivastavInk/Cryptocurrency-Volatility-Prediction" target="_blank">
+    View on GitHub ↗
+  </a>
+</footer>
+
+</body>
+</html>
