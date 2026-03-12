@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CryptoVol — Cryptocurrency Volatility Prediction Dashboard</title>
+  <meta name="description" content="AI-powered cryptocurrency volatility prediction using Random Forest ML. Analyze 56 coins, view historical trends, and predict volatility in real-time." />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ── Navbar ────────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="container navbar-inner">
+    <div class="logo">
+      <div class="logo-icon">📈</div>
+      Crypto<span>Vol</span>
+    </div>
+    <span class="nav-badge" id="liveStatus">● Live</span>
+  </div>
+</nav>
+
+<!-- ── Main ──────────────────────────────────────────────────────────────────── -->
+<main class="container">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-eyebrow">🤖 AI-Powered Analysis</div>
+    <h1>Crypto Volatility<br><span class="grad">Prediction Platform</span></h1>
+    <p>
+      Random Forest ML model trained on <strong>56 cryptocurrencies</strong> and
+      over <strong>70,000 daily records</strong> to forecast 14-day market volatility.
+    </p>
+    <div class="hero-stats">
+      <div class="h-stat">
+        <div class="h-stat-val" id="hStatCryptos">—</div>
+        <div class="h-stat-label">Cryptocurrencies</div>
+      </div>
+      <div class="h-stat">
+        <div class="h-stat-val">200</div>
+        <div class="h-stat-label">Decision Trees</div>
+      </div>
+      <div class="h-stat">
+        <div class="h-stat-val" id="hStatVol">—</div>
+        <div class="h-stat-label">Avg Market Volatility</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Summary Cards -->
+  <section class="section">
+    <div class="summary-cards">
+      <div class="card s-card">
+        <div class="icon">💎</div>
+        <div class="val c-violet" id="sumCryptos">—</div>
+        <div class="lbl">Total Coins</div>
+      </div>
+      <div class="card s-card">
+        <div class="icon">🔥</div>
+        <div class="val c-red" id="sumMostVol">—</div>
+        <div class="lbl">Most Volatile</div>
+      </div>
+      <div class="card s-card">
+        <div class="icon">🧊</div>
+        <div class="val c-green" id="sumLeastVol">—</div>
+        <div class="lbl">Most Stable</div>
+      </div>
+      <div class="card s-card">
+        <div class="icon">📊</div>
+        <div class="val c-cyan" id="sumAvgVol">—</div>
+        <div class="lbl">Market Avg Vol</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Market Ranking -->
+  <section class="section">
+    <h2 class="section-heading">
+      Market Ranking <div class="line"></div>
+    </h2>
+
+    <div class="coin-grid">
+      <!-- High Volatility -->
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-danger);box-shadow:0 0 8px var(--accent-danger)"></span>Most Volatile Coins</div>
+        <div class="volatile-list" id="volatileList">
+          <div class="loading-overlay show"><div class="spinner"></div></div>
+        </div>
+      </div>
+      <!-- Low Volatility -->
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent-safe);box-shadow:0 0 8px var(--accent-safe)"></span>Most Stable Coins</div>
+        <div class="stable-list" id="stableList">
+          <div class="loading-overlay show"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Coin Explorer -->
+  <section class="section">
+    <h2 class="section-heading">
+      Coin Explorer <div class="line"></div>
+    </h2>
+
+    <div class="card">
+      <div class="search-bar">
+        <select id="coinSelect" aria-label="Select cryptocurrency">
+          <option value="">Select a cryptocurrency…</option>
+        </select>
+        <select id="periodSelect" aria-label="Select period">
+          <option value="30">30 Days</option>
+          <option value="60">60 Days</option>
+          <option value="90" selected>90 Days</option>
+          <option value="180">180 Days</option>
+          <option value="365">365 Days</option>
+        </select>
+        <button class="btn btn-primary" id="loadCoinBtn">Analyse →</button>
+      </div>
+
+      <!-- Chart area -->
+      <div id="chartSection" style="display:none">
+        <div class="chart-meta">
+          <div>
+            <div class="chart-label" id="chartTitle">—</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px" id="chartSubtitle">Price &amp; 14-Day Volatility</div>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="mainChart"></canvas>
+        </div>
+
+        <!-- Latest stats -->
+        <div class="grid-3" style="margin-top:20px">
+          <div class="card" style="padding:16px;text-align:center">
+            <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px">LATEST CLOSE</div>
+            <div style="font-size:1.3rem;font-weight:800;color:var(--accent-2)" id="statClose">—</div>
+          </div>
+          <div class="card" style="padding:16px;text-align:center">
+            <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px">14D VOLATILITY</div>
+            <div style="font-size:1.3rem;font-weight:800;color:var(--accent-1)" id="statVol">—</div>
+          </div>
+          <div class="card" style="padding:16px;text-align:center">
+            <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px">LATEST DATE</div>
+            <div style="font-size:1.1rem;font-weight:700;color:var(--text-secondary)" id="statDate">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="chartPlaceholder" style="text-align:center;padding:60px 0;color:var(--text-muted)">
+        <div style="font-size:2.5rem;margin-bottom:12px">🔍</div>
+        Select a coin and click <strong>Analyse</strong> to view price history and volatility.
+      </div>
+    </div>
+  </section>
+
+  <!-- Prediction Form -->
+  <section class="section">
+    <h2 class="section-heading">
+      Live Volatility Predictor <div class="line"></div>
+    </h2>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent-2);box-shadow:0 0 8px var(--accent-2)"></span>Enter OHLCV Values</div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:20px">
+        Input any raw market data to get an instant 14-day volatility prediction from the Random Forest model.
+      </p>
+      <div class="pred-form">
+        <div class="form-group">
+          <label for="pOpen">OPEN PRICE ($)</label>
+          <input type="number" id="pOpen" placeholder="e.g. 50000" min="0" step="any" />
+        </div>
+        <div class="form-group">
+          <label for="pHigh">HIGH PRICE ($)</label>
+          <input type="number" id="pHigh" placeholder="e.g. 52000" min="0" step="any" />
+        </div>
+        <div class="form-group">
+          <label for="pLow">LOW PRICE ($)</label>
+          <input type="number" id="pLow" placeholder="e.g. 49000" min="0" step="any" />
+        </div>
+        <div class="form-group">
+          <label for="pClose">CLOSE PRICE ($)</label>
+          <input type="number" id="pClose" placeholder="e.g. 51000" min="0" step="any" />
+        </div>
+        <div class="form-group">
+          <label for="pVolume">VOLUME ($)</label>
+          <input type="number" id="pVolume" placeholder="e.g. 1500000000" min="0" step="any" />
+        </div>
+        <div class="form-group">
+          <label for="pMarketcap">MARKET CAP ($)</label>
+          <input type="number" id="pMarketcap" placeholder="e.g. 900000000000" min="0" step="any" />
+        </div>
+
+        <div class="pred-btn-wrap">
+          <button class="btn btn-primary" id="predictBtn" style="width:100%">
+            🤖 Predict Volatility
+          </button>
+        </div>
+
+        <div class="pred-result" id="predResult">
+          <div class="pred-val-label">PREDICTED 14-DAY VOLATILITY</div>
+          <div class="pred-val" id="predVal">—</div>
+          <div><span class="pred-level" id="predLevel">—</span></div>
+          <div class="pred-interp" id="predInterp">—</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    Built with ❤️ · Random Forest ML · <span>Flask + SQLite + Chart.js</span>
+    · 56 Cryptocurrencies · 14-Day Volatility Prediction
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
